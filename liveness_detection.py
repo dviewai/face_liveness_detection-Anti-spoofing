@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import imutils
 import time
+import start1.utils as amutils
+import os
 
 
 def bounding_box(img,box,match_name=[]):
@@ -23,6 +25,12 @@ def bounding_box(img,box,match_name=[]):
 # inicializar conteo de parpadeos
 COUNTER,TOTAL = 0,0
 input_type = "webcam"
+
+outvideo_flag = True
+
+if outvideo_flag:
+    videoname = r'C:\Work\per\dview\dview_face_toolbox\liveness_webcam.avi'
+    videoout = amutils.WriteVideo(outputdir=os.path.dirname(videoname), outputname=os.path.basename(videoname))
 
 #----------------------------- Imagen ------------------------------
 if input_type == "image":    
@@ -46,6 +54,8 @@ if input_type == "webcam":
     cv2.namedWindow("preview")
     cam = cv2.VideoCapture(0)
     ret, frame = cam.read()
+    ttime=0
+    prev_status = 'Evaluating...'
     while True:
         star_time = time.time()
         ret, im = cam.read()
@@ -58,10 +68,43 @@ if input_type == "webcam":
         COUNTER= out['count_blinks_consecutives']
         res_img = bounding_box(im,boxes,tags)
 
-        end_time = time.time() - star_time    
+        end_time = time.time() - star_time
+        ttime +=end_time  #total time in secs
         FPS = 1/end_time
-        cv2.putText(res_img,f"FPS: {round(FPS,3)}",(10,50),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-        cv2.putText(res_img,f"blinks: {round(TOTAL,3)}",(10,100),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-        cv2.imshow('preview',res_img)
+        num_blinks_per_slot = TOTAL*60/ttime
+        #cv2.putText(res_img,f"FPS: {round(FPS,3)}",(10,50),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+        #cv2.putText(res_img,f"blinks: {round(TOTAL,3)}",(10,100),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+
+        if ttime < 10:
+            #status = 'Evaluating...'
+            if prev_status == 'Evaluating...':
+                cv2.putText(res_img, prev_status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
+            else:
+                if prev_status == 'FAIL':
+                    cv2.putText(res_img, prev_status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+                else:
+                    cv2.putText(res_img, prev_status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+        else:
+            if num_blinks_per_slot < 1:
+                status = 'FAIL'
+                cv2.putText(res_img, status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+            else:
+                status = 'PASS'
+                cv2.putText(res_img, status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            prev_status = status
+            ttime = 0
+            num_blinks_per_min=0
+            TOTAL = 0
+
+
+        #cv2.putText(res_img, f"Time: {round(ttime,2)}", (10, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+        #cv2.putText(res_img, status, (10, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+        cv2.imshow('Liveness Test:',res_img)
+        if outvideo_flag:
+            videoout.push_frame(res_img)
         if cv2.waitKey(1) &0xFF == ord('q'):
-            break 
+            break
+
+if outvideo_flag:
+    videoout.release_video()
