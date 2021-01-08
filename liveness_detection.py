@@ -29,7 +29,7 @@ input_type = "webcam"
 outvideo_flag = True
 
 if outvideo_flag:
-    videoname = r'C:\Work\per\dview\dview_face_toolbox\liveness_webcam.avi'
+    videoname = r'C:\Work\per\dview\dview_face_toolbox\liveness_webcam_example2.avi'
     videoout = amutils.WriteVideo(outputdir=os.path.dirname(videoname), outputname=os.path.basename(videoname))
 
 #----------------------------- Imagen ------------------------------
